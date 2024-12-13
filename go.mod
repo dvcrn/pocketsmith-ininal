@@ -1,4 +1,4 @@
-module github.com/dvcrn/pocketsmith-anapay
+module github.com/dvcrn/pocketsmith-ininal
 
 go 1.23.3
 

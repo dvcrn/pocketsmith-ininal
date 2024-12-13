@@ -4,6 +4,7 @@ WORKDIR /app
 
 # Copy go mod files
 COPY go.mod ./
+COPY go.sum ./
 
 # Download dependencies
 RUN go mod download
@@ -12,14 +13,14 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN go build -o anapay-importer
+RUN go build -o ininal-importer
 
 FROM alpine:latest
 
 WORKDIR /app
 
 # Copy the binary from builder
-COPY --from=builder /app/anapay-importer .
+COPY --from=builder /app/ininal-importer .
 
 # Run the application
-ENTRYPOINT ["./anapay-importer"]
+ENTRYPOINT ["./ininal-importer"]
