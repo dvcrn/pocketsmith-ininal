@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -16,36 +14,67 @@ import (
 const INSTITUION_NAME = "Ininal"
 const ACCOUNT_NAME = "Ininal"
 
-
 type Config struct {
-	AnapayUsername   string
-	AnapayPassword   string
+	DeviceID         string
+	LoginToken       string
+	UserToken        string
+	LoginBearerToken string
 	PocketsmithToken string
 
-	NumTransactions int
+	Password        string
+	LoginCredential string
+	DeviceSignature string
 }
 
 func getConfig() *Config {
 	config := &Config{}
 
 	// Define command-line flags
-	// flag.StringVar(&config.AnapayUsername, "username", os.Getenv("ININAL_USERNAME"), "Ininal username")
-	// flag.StringVar(&config.AnapayPassword, "password", os.Getenv("ININAL_PASSWORD"), "Ininal password")
-	flag.StringVar(&config.PocketsmithToken, "token", os.Getenv("POCKETSMITH_TOKEN"), "Pocketsmith API token")
-	// flag.IntVar(&config.NumTransactions, "num-transactions", 100, "Number of transactions to parse")
+	flag.StringVar(&config.DeviceID, "device-id", os.Getenv("ININAL_DEVICE_ID"), "Ininal device ID")
+	flag.StringVar(&config.LoginToken, "login-token", os.Getenv("ININAL_LOGIN_TOKEN"), "Ininal login token")
+	flag.StringVar(&config.UserToken, "user-token", os.Getenv("ININAL_USER_TOKEN"), "Ininal user token")
+	flag.StringVar(&config.LoginBearerToken, "login-bearer-token", os.Getenv("ININAL_LOGIN_BEARER_TOKEN"), "Ininal login bearer token")
+
+	flag.StringVar(&config.PocketsmithToken, "pocketsmith-token", os.Getenv("POCKETSMITH_TOKEN"), "Pocketsmith API token")
+
+	flag.StringVar(&config.Password, "password", os.Getenv("ININAL_PASSWORD"), "Ininal password (App PIN)")
+	flag.StringVar(&config.LoginCredential, "login-credential", os.Getenv("ININAL_LOGIN_CREDENTIAL"), "Ininal login credential (Phone Number)")
+	flag.StringVar(&config.DeviceSignature, "device-signature", os.Getenv("ININAL_DEVICE_SIGNATURE"), "Ininal device signature")
+
 	flag.Parse()
 
 	// Validate required fields
-	// if config.AnapayUsername == "" {
-	// 	fmt.Println("Error: Anapay username is required. Set via -username flag or ANAPAY_USERNAME environment variable")
-	// 	os.Exit(1)
-	// }
-	// if config.AnapayPassword == "" {
-	// 	fmt.Println("Error: Anapay password is required. Set via -password flag or ANAPAY_PASSWORD environment variable")
-	// 	os.Exit(1)
-	// }
+	if config.DeviceID == "" {
+		fmt.Println("Error: Device ID is required. Set via -device-id flag or ININAL_DEVICE_ID environment variable")
+		os.Exit(1)
+	}
+	if config.LoginToken == "" {
+		fmt.Println("Error: Login token is required. Set via -login-token flag or ININAL_LOGIN_TOKEN environment variable")
+		os.Exit(1)
+	}
+	if config.UserToken == "" {
+		fmt.Println("Error: User token is required. Set via -user-token flag or ININAL_USER_TOKEN environment variable")
+		os.Exit(1)
+	}
+	if config.LoginBearerToken == "" {
+		fmt.Println("Error: Login bearer token is required. Set via -login-bearer-token flag or ININAL_LOGIN_BEARER_TOKEN environment variable")
+		os.Exit(1)
+	}
 	if config.PocketsmithToken == "" {
 		fmt.Println("Error: Pocketsmith token is required. Set via -token flag or POCKETSMITH_TOKEN environment variable")
+		os.Exit(1)
+	}
+
+	if config.Password == "" {
+		fmt.Println("Error: Password is required. Set via -password flag or ININAL_PASSWORD environment variable")
+		os.Exit(1)
+	}
+	if config.LoginCredential == "" {
+		fmt.Println("Error: Login credential is required. Set via -login-credential flag or ININAL_LOGIN_CREDENTIAL environment variable")
+		os.Exit(1)
+	}
+	if config.DeviceSignature == "" {
+		fmt.Println("Error: Device signature is required. Set via -device-signature flag or ININAL_DEVICE_SIGNATURE environment variable")
 		os.Exit(1)
 	}
 
@@ -101,28 +130,17 @@ func main() {
 
 	// First login step
 	loginResp, err := client.Login(
-		"244078",
-		"4FE92B1D-9D75-47C0-BD65-C650F8921441",
-		"+818099784527",
-		LOGIN_TOKEN, // login token??
-		// USER_TOKEN,
-		LOGIN_BEARER_TOKEN,
+		config.Password,
+		config.DeviceID,
+		config.LoginCredential,
+		config.LoginToken,
+		config.LoginBearerToken,
+		config.DeviceSignature,
 	)
 
 	if err != nil {
 		panic(err)
 	}
-
-	// TODO: for debug. remove me.
-	func(v interface{}) {
-		j, err := json.MarshalIndent(v, "", "  ")
-		if err != nil {
-			fmt.Printf("%v\n", err)
-			return
-		}
-		buf := bytes.NewBuffer(j)
-		fmt.Printf("%v\n", buf.String())
-	}(loginResp)
 
 	// wait and ask for OTP
 	if loginResp.Response.AuthStatus == "OTP_REQUIRED" {
@@ -130,21 +148,10 @@ func main() {
 		var otp string
 		fmt.Scanln(&otp)
 
-		verifyResp, err := client.Verify(otp, loginResp.Response.Token, LOGIN_BEARER_TOKEN)
+		verifyResp, err := client.Verify(otp, loginResp.Response.Token, config.LoginBearerToken)
 		if err != nil {
 			panic(err)
 		}
-
-		// TODO: for debug. remove me.
-		func(v interface{}) {
-			j, err := json.MarshalIndent(v, "", "  ")
-			if err != nil {
-				fmt.Printf("%v\n", err)
-				return
-			}
-			buf := bytes.NewBuffer(j)
-			fmt.Printf("%v\n", buf.String())
-		}(verifyResp)
 
 		userToken = verifyResp.Response.UserToken
 		userAuth = verifyResp.Response.Token
@@ -155,41 +162,14 @@ func main() {
 	}
 
 	// GetDetails:
-	fmt.Println("Got:")
-	fmt.Println("userToken: ", userToken)
-	fmt.Println("userAuth: ", userAuth)
+	// fmt.Println("Got:")
+	// fmt.Println("userToken: ", userToken)
+	// fmt.Println("userAuth: ", userAuth)
 
-	userCardAccount, err := client.GetUserDetails(userToken, userAuth)
+	cardAccount, err := client.GetUserCardAccount(config.DeviceID, userToken, userAuth)
 	if err != nil {
 		panic(err)
 	}
-
-	// TODO: for debug. remove me.
-	func(v interface{}) {
-		j, err := json.MarshalIndent(v, "", "  ")
-		if err != nil {
-			fmt.Printf("%v\n", err)
-			return
-		}
-		buf := bytes.NewBuffer(j)
-		fmt.Printf("%v\n", buf.String())
-	}(userCardAccount)
-
-	cardAccount, err := client.GetUserCardAccount(deviceID, userToken, userAuth)
-	if err != nil {
-		panic(err)
-	}
-
-	// Debug print card account details
-	func(v interface{}) {
-		j, err := json.MarshalIndent(v, "", "  ")
-		if err != nil {
-			fmt.Printf("%v\n", err)
-			return
-		}
-		buf := bytes.NewBuffer(j)
-		fmt.Printf("%v\n", buf.String())
-	}(cardAccount)
 
 	// Get transactions for each account
 	for _, account := range cardAccount.AccountListResponse {
@@ -200,16 +180,15 @@ func main() {
 			fmt.Printf("Error creating/finding Pocketsmith account: %v\n", err)
 			continue
 		}
-		fmt.Printf("Updating Ininal Account Balance to %f.2 for date %s\n", account.AccountBalance, time.Now().Format("2006-01-02"))
 
-		updateRes, err := ps.UpdateTransactionAccount(psAcc.ID, psAcc.PrimaryTransactionAccount.Institution.ID, account.AccountBalance, time.Now().Format("2006-01-02"))
+		dateString := time.Now().Format("2006-01-02")
+
+		updateRes, err := ps.UpdateTransactionAccount(psAcc.PrimaryTransactionAccount.ID, psAcc.PrimaryTransactionAccount.Institution.ID, account.AccountBalance, dateString)
 		if err != nil {
 			fmt.Printf("Error updating Ininal account balance: %v\n", err)
 			continue
 		}
-		fmt.Printf("Updated Ininal account balance: %.2f\n", updateRes.CurrentBalance)
-
-		fmt.Printf("\nFetching transactions for account: %s\n", account.AccountName)
+		fmt.Println("Updated Ininal Account balance: ", updateRes.CurrentBalance)
 
 		transactions, err := client.GetUserTransactions(
 			userToken,
@@ -227,40 +206,24 @@ func main() {
 		fmt.Println(len(transactions))
 
 		repeatedExistingTransactions := 0
-		for _, transaction := range transactions {
-			fmt.Printf("Transaction: %s (%s) from %s\n", transaction.Description, transaction.ReferenceNo, transaction.TransactionDate.Format("2006-01-02"))
+		for i, transaction := range transactions {
+			fmt.Printf("[%d/%d] Transaction: %s (%s) from %s\n", i+1, len(transactions), transaction.Description, transaction.ReferenceNo, transaction.TransactionDate.Format("2006-01-02"))
+
 			if repeatedExistingTransactions > 10 {
 				fmt.Println("Too many repeated existing transactions, exiting")
 				break
 			}
 
-			startDate := transaction.TransactionDate.Add(-2 * 24 * time.Hour).Format("2006-01-02")
-			endDate := transaction.TransactionDate.Add(1 * 24 * time.Hour).Format("2006-01-02")
-			fmt.Printf("Searching for transactions between %s and %s\n", startDate, endDate)
-
-			searchRes, err := ps.SearchTransactions(psAcc.PrimaryTransactionAccount.ID, startDate, endDate, "")
+			searchRes, err := ps.SearchTransactionsByMemoContains(psAcc.PrimaryTransactionAccount.ID, transaction.TransactionDate, transaction.ReferenceNo)
 			if err != nil {
-				fmt.Printf("Error searching for transaction: %v\n", err)
+				fmt.Printf("Error searching for existing transaction: %v\n", err)
 				continue
 			}
 
 			if len(searchRes) > 0 {
-				for _, tx := range searchRes {
-					checkNum := ""
-					if tx.ChequeNumber != nil {
-						checkNum = *tx.ChequeNumber
-					}
-					memo := ""
-					if tx.Memo != nil {
-						memo = *tx.Memo
-					}
-
-					if checkNum == transaction.ReferenceNo || memo == transaction.ReferenceNo {
-						fmt.Println("Found transaction already, won't add it again: ", transaction.ReferenceNo)
-						repeatedExistingTransactions++
-						break
-					}
-				}
+				fmt.Println("Found existing transaction by ref number: ", transaction.ReferenceNo)
+				repeatedExistingTransactions++
+				continue
 			}
 
 			createTx := &pocketsmith.CreateTransaction{

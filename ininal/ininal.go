@@ -10,8 +10,6 @@ import (
 )
 
 const (
-)
-const (
 	BaseURL = "https://api.ininal.com/v3.0"
 )
 
@@ -162,7 +160,7 @@ type VerifyRequest struct {
 	Token string `json:"token"`
 }
 
-func (c *Client) Login(password, deviceID, loginCredential, loginToken string, bearerToken string) (*LoginResponse, error) {
+func (c *Client) Login(password, deviceID, loginCredential, loginToken string, bearerToken string, deviceSignature string) (*LoginResponse, error) {
 
 	req := LoginRequest{
 		Password:        password,
