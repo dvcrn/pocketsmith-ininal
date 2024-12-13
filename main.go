@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dvcrn/pocketsmith-anapay/ininal"
 	"github.com/dvcrn/pocketsmith-go"
+	"github.com/dvcrn/pocketsmith-ininal/ininal"
 )
 
 const INSTITUION_NAME = "Ininal"
